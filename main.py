@@ -31,10 +31,24 @@ def to_xyxy(
     return (x, y, x + w, y + h)
 
 
+def compute_resize_scale(
+    height: int, width: int, max_width: int = 1280, max_height: int = 720
+) -> float:
+    return min(max_width / width, max_height / height, 1.0)
+
+
 def select_roi(frame: np.ndarray) -> tuple[int, int, int, int] | None:
-    roi_xywh = cv2.selectROI(_ROI_WINDOW_NAME, frame, showCrosshair=True)
+    height, width = frame.shape[:2]
+    scale = compute_resize_scale(height, width)
+    display_frame = (
+        cv2.resize(frame, (int(width * scale), int(height * scale)))
+        if scale != 1.0
+        else frame
+    )
+    roi_xywh = cv2.selectROI(_ROI_WINDOW_NAME, display_frame, showCrosshair=True)
     cv2.destroyWindow(_ROI_WINDOW_NAME)
-    return to_xyxy(tuple(int(v) for v in roi_xywh))
+    scaled_roi_xywh = tuple(int(v / scale) for v in roi_xywh)
+    return to_xyxy(scaled_roi_xywh)
 
 
 def main() -> None:
