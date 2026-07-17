@@ -59,3 +59,42 @@ def test_generate_filename_zero_padded_index():
     filename = generate_filename(42, "png", timestamp)
 
     assert filename == "20260716_153245_042.png"
+
+
+def test_write_metadata_includes_roi_when_set(tmp_path):
+    session_dir = tmp_path / "test_seti"
+    session_dir.mkdir()
+    config = SessionConfig(
+        purpose="model egitimi",
+        rtsp_url="rtsp://kamera/1",
+        interval=30,
+        confidence=0.5,
+        image_format="jpg",
+        roi=(10, 20, 110, 220),
+    )
+
+    metadata_path = write_metadata(session_dir, config)
+
+    import json
+
+    data = json.loads(metadata_path.read_text(encoding="utf-8"))
+    assert data["roi"] == {"x1": 10, "y1": 20, "x2": 110, "y2": 220}
+
+
+def test_write_metadata_roi_is_null_when_not_set(tmp_path):
+    session_dir = tmp_path / "test_seti"
+    session_dir.mkdir()
+    config = SessionConfig(
+        purpose="model egitimi",
+        rtsp_url="rtsp://kamera/1",
+        interval=30,
+        confidence=0.5,
+        image_format="jpg",
+    )
+
+    metadata_path = write_metadata(session_dir, config)
+
+    import json
+
+    data = json.loads(metadata_path.read_text(encoding="utf-8"))
+    assert data["roi"] is None

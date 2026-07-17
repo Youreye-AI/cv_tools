@@ -14,6 +14,7 @@ class SessionConfig:
     interval: int
     confidence: float
     image_format: str
+    roi: tuple[int, int, int, int] | None = None
 
 
 def create_session_dir(name: str, base_dir: Path) -> Path:
@@ -30,6 +31,16 @@ def write_metadata(session_dir: Path, config: SessionConfig) -> Path:
         "interval": config.interval,
         "confidence": config.confidence,
         "image_format": config.image_format,
+        "roi": (
+            {
+                "x1": config.roi[0],
+                "y1": config.roi[1],
+                "x2": config.roi[2],
+                "y2": config.roi[3],
+            }
+            if config.roi is not None
+            else None
+        ),
     }
     metadata_path = session_dir / "metadata.json"
     metadata_path.write_text(
