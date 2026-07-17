@@ -18,6 +18,16 @@ def crop_detections(
     return crops
 
 
+def is_center_in_roi(
+    box: tuple[int, int, int, int], roi: tuple[int, int, int, int]
+) -> bool:
+    bx1, by1, bx2, by2 = box
+    rx1, ry1, rx2, ry2 = roi
+    cx = (bx1 + bx2) / 2
+    cy = (by1 + by2) / 2
+    return rx1 <= cx < rx2 and ry1 <= cy < ry2
+
+
 class PersonDetector:
     """Wraps an Ultralytics YOLO26 model to detect and crop persons (class 0)."""
 
@@ -35,7 +45,9 @@ class PersonDetector:
 
             self._model = YOLO(model_path)
 
-    def detect_and_crop(self, frame: np.ndarray) -> list[np.ndarray]:
+    def detect_and_crop(
+        self, frame: np.ndarray, roi: tuple[int, int, int, int] | None = None
+    ) -> list[np.ndarray]:
         results = self._model.predict(
             frame, conf=self._confidence, classes=[0], verbose=False
         )
@@ -44,4 +56,6 @@ class PersonDetector:
             for result in results
             for box in result.boxes
         ]
+        if roi is not None:
+            boxes = [box for box in boxes if is_center_in_roi(box, roi)]
         return crop_detections(frame, boxes)

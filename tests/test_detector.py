@@ -70,3 +70,48 @@ def test_person_detector_no_detections_returns_empty_list():
     crops = detector.detect_and_crop(frame)
 
     assert crops == []
+
+
+from detector import is_center_in_roi
+
+
+def test_is_center_in_roi_true_when_center_inside():
+    assert is_center_in_roi((10, 10, 20, 20), (0, 0, 100, 100)) is True
+
+
+def test_is_center_in_roi_false_when_center_outside():
+    assert is_center_in_roi((200, 200, 220, 220), (0, 0, 100, 100)) is False
+
+
+def test_is_center_in_roi_left_edge_inclusive():
+    assert is_center_in_roi((0, 40, 20, 60), (10, 0, 100, 100)) is True
+
+
+def test_is_center_in_roi_right_edge_exclusive():
+    assert is_center_in_roi((90, 40, 110, 60), (0, 0, 100, 100)) is False
+
+
+def test_person_detector_detect_and_crop_filters_by_roi():
+    frame = np.zeros((100, 100, 3), dtype=np.uint8)
+    frame[0:10, 0:10] = 200
+    frame[90:100, 90:100] = 150
+    fake_model = _FakeModel(boxes_per_call=[(0, 0, 10, 10), (90, 90, 100, 100)])
+    detector = PersonDetector(confidence=0.5, model=fake_model)
+
+    crops = detector.detect_and_crop(frame, roi=(0, 0, 50, 50))
+
+    assert len(crops) == 1
+    assert crops[0].shape == (10, 10, 3)
+    assert (crops[0] == 200).all()
+
+
+def test_person_detector_detect_and_crop_roi_none_keeps_all():
+    frame = np.zeros((100, 100, 3), dtype=np.uint8)
+    frame[0:10, 0:10] = 200
+    frame[90:100, 90:100] = 150
+    fake_model = _FakeModel(boxes_per_call=[(0, 0, 10, 10), (90, 90, 100, 100)])
+    detector = PersonDetector(confidence=0.5, model=fake_model)
+
+    crops = detector.detect_and_crop(frame, roi=None)
+
+    assert len(crops) == 2
