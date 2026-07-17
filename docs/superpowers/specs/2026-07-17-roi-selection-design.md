@@ -29,15 +29,21 @@ arka plandan geçen kişiler) tespitler filtrelenebilir.
 
 ## Bileşenler
 
-- **`roi.py`** (yeni modül):
-  - `to_xyxy(roi_xywh: tuple[int, int, int, int]) -> tuple[int, int, int, int] | None` — saf
-    fonksiyon. `cv2.selectROI`'nin döndürdüğü `(x, y, w, h)` formatını `(x1, y1, x2, y2)`'ye
-    çevirir; `w <= 0` veya `h <= 0` ise (iptal edilmiş/sıfır boyutlu seçim) `None` döner.
-  - `select_roi(frame: np.ndarray) -> tuple[int, int, int, int] | None` — gerçek bir
-    `cv2.selectROI` penceresi açar, kullanıcı seçimini `to_xyxy` ile dönüştürüp döner. Gerçek
-    GUI etkileşimi gerektirdiğinden otomatik test kapsamı dışındadır (kapsam dışı bölümüne bkz.).
+Ayrı bir `roi.py` modülü açılmıyor — ROI seçim kodu doğrudan `main.py` içinde tutulur, böylece
+tüm akış tek dosyadan takip edilebilir.
 
-- **`detector.py`** (değişiklik):
+- **`main.py`** (değişiklik, ROI seçim kodu burada yaşayacak):
+  - `to_xyxy(roi_xywh: tuple[int, int, int, int]) -> tuple[int, int, int, int] | None` — saf
+    fonksiyon, `main.py` içine eklenir. `cv2.selectROI`'nin döndürdüğü `(x, y, w, h)` formatını
+    `(x1, y1, x2, y2)`'ye çevirir; `w <= 0` veya `h <= 0` ise (iptal edilmiş/sıfır boyutlu seçim)
+    `None` döner.
+  - `select_roi(frame: np.ndarray) -> tuple[int, int, int, int] | None` — `main.py` içine
+    eklenir, gerçek bir `cv2.selectROI` penceresi açar, kullanıcı seçimini `to_xyxy` ile
+    dönüştürüp döner. Gerçek GUI etkileşimi gerektirdiğinden otomatik test kapsamı dışındadır
+    (kapsam dışı bölümüne bkz.); `to_xyxy` ise saf fonksiyon olduğundan test edilir.
+
+- **`detector.py`** (değişiklik — ROI filtreleme mantığı burada kalır, çünkü
+  `PersonDetector.detect_and_crop`'un bir parçasıdır):
   - Yeni saf fonksiyon `is_center_in_roi(box: tuple[int, int, int, int], roi: tuple[int, int, int, int]) -> bool`
     — box'ın merkez noktasının `(cx, cy)` ROI dikdörtgeni `[x1, x2) x [y1, y2)` içinde olup
     olmadığını döner.
@@ -52,11 +58,11 @@ arka plandan geçen kişiler) tespitler filtrelenebilir.
   - `write_metadata`, `config.roi` doluysa `{"x1": .., "y1": .., "x2": .., "y2": ..}` sözlüğünü,
     boşsa `null` değerini `metadata.json`'daki `roi` alanına yazar.
 
-- **`main.py`** (değişiklik):
+- **`main.py`** (değişiklik — `main()` akışı):
   - `RtspFrameSource` oluşturulduktan sonra, ana döngüden önce `frames()` generator'ından ilk
     frame ayrı okunur.
-  - ROI sorusu terminalden sorulur; "e"/"evet" ise `roi.select_roi(first_frame)` çağrılır,
-    sonucu (olabilir `None`) `roi` değişkeninde tutulur.
+  - ROI sorusu terminalden sorulur; "e"/"evet" ise `select_roi(first_frame)` çağrılır, sonucu
+    (olabilir `None`) `roi` değişkeninde tutulur.
   - `SessionConfig`'e `roi=roi` geçirilir (metadata'ya yazılması için); bu nedenle
     `write_metadata` çağrısı ROI seçiminden SONRA yapılacak şekilde main.py'nin akış sırası
     güncellenir.
@@ -73,7 +79,8 @@ arka plandan geçen kişiler) tespitler filtrelenebilir.
 - Çoklu/dairesel/poligon ROI şekilleri — yalnızca tek bir dikdörtgen ROI desteklenir.
 - `select_roi`'nin otomatik testi — gerçek bir OpenCV GUI penceresi ve fare etkileşimi
   gerektirdiğinden, `rtsp_source.py`'nin gerçek RTSP bağlantısı gibi kapsam dışıdır; kullanıcı
-  tarafından manuel doğrulanır.
+  tarafından manuel doğrulanır. `to_xyxy` saf fonksiyon olduğu için bu kapsam dışının parçası
+  değildir, otomatik test edilir.
 
 ## Hata Yönetimi
 
