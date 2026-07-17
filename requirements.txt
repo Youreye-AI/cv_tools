@@ -1,0 +1,14 @@
+# Bu proje conda ortami cvstack313 (Python 3.13) hedeflenerek gelistirildi.
+#
+# NOT (opencv/cv2): Bu ortamdaki cv2, RTSP okumasi icin GStreamer destegiyle
+# ozel olarak build edilmis (cv2.getBuildInformation() -> "GStreamer: YES (1.28.1)",
+# "GUI: WIN32UI") ve pip/conda uzerinden degil, manuel olarak kurulmus durumda.
+# PyPI'daki standart opencv-python paketi bu GStreamer destegini icermez ve
+# kurulursa RTSP okumasini bozar. Bu yuzden opencv-python bu dosyada listelenmiyor;
+# cv2'nin GStreamer destekli ozel build ile zaten kurulu oldugundan emin olun.
+
+numpy==2.4.4
+ultralytics==8.4.34
+
+# Test bagimliligi
+pytest==9.0.3
