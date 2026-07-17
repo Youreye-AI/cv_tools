@@ -7,16 +7,34 @@ from datetime import datetime
 from pathlib import Path
 
 import cv2
+import numpy as np
 
 from detector import PersonDetector
 from rtsp_source import RtspFrameSource
 from session import SessionConfig, create_session_dir, generate_filename, write_metadata
+
+_ROI_WINDOW_NAME = "ROI sec (Enter/Space: onayla, ESC: iptal)"
 
 
 def ask(prompt: str, default: str | None = None) -> str:
     suffix = f" [{default}]" if default is not None else ""
     answer = input(f"{prompt}{suffix}: ").strip()
     return answer if answer else (default or "")
+
+
+def to_xyxy(
+    roi_xywh: tuple[int, int, int, int]
+) -> tuple[int, int, int, int] | None:
+    x, y, w, h = roi_xywh
+    if w <= 0 or h <= 0:
+        return None
+    return (x, y, x + w, y + h)
+
+
+def select_roi(frame: np.ndarray) -> tuple[int, int, int, int] | None:
+    roi_xywh = cv2.selectROI(_ROI_WINDOW_NAME, frame, showCrosshair=True)
+    cv2.destroyWindow(_ROI_WINDOW_NAME)
+    return to_xyxy(tuple(int(v) for v in roi_xywh))
 
 
 def main() -> None:
@@ -48,18 +66,27 @@ def main() -> None:
 
     try:
         session_dir = create_session_dir(name, Path.cwd())
+
+        detector = PersonDetector(confidence=confidence)
+        source = RtspFrameSource(rtsp_url)
+        frame_iter = source.frames()
+        first_frame = next(frame_iter)
+
+        roi: tuple[int, int, int, int] | None = None
+        want_roi = ask("ROI secmek ister misiniz? (e/H)", "h").lower()
+        if want_roi in ("e", "evet"):
+            roi = select_roi(first_frame)
+
         config = SessionConfig(
             purpose=purpose,
             rtsp_url=rtsp_url,
             interval=interval,
             confidence=confidence,
             image_format=image_format,
+            roi=roi,
         )
         write_metadata(session_dir, config)
         print(f"Klasor olusturuldu: {session_dir}")
-
-        detector = PersonDetector(confidence=confidence)
-        source = RtspFrameSource(rtsp_url)
 
         state = {"saved_count": 0}
 
@@ -70,17 +97,26 @@ def main() -> None:
 
         signal.signal(signal.SIGINT, handle_sigint)
 
-        frame_index = 0
-        for frame in source.frames():
-            frame_index += 1
+        def process_frame(frame_index: int, frame: np.ndarray) -> None:
             if frame_index % interval != 0:
-                continue
-            crops = detector.detect_and_crop(frame)
+                return
+            crops = detector.detect_and_crop(frame, roi=roi)
             for crop in crops:
-                filename = generate_filename(state["saved_count"], image_format, datetime.now())
+                filename = generate_filename(
+                    state["saved_count"], image_format, datetime.now()
+                )
                 cv2.imwrite(str(session_dir / filename), crop)
                 state["saved_count"] += 1
-            print(f"Frame {frame_index}: {len(crops)} kisi kaydedildi (toplam {state['saved_count']})")
+            print(
+                f"Frame {frame_index}: {len(crops)} kisi kaydedildi "
+                f"(toplam {state['saved_count']})"
+            )
+
+        frame_index = 1
+        process_frame(frame_index, first_frame)
+        for frame in frame_iter:
+            frame_index += 1
+            process_frame(frame_index, frame)
     except (FileExistsError, RuntimeError) as exc:
         print(f"Hata: {exc}")
         sys.exit(1)
