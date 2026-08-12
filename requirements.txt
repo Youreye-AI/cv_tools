@@ -10,5 +10,9 @@
 numpy==2.4.4
 ultralytics==8.4.34
 
+# split_dataset.py, Roboflow export'undaki data.yaml dosyasini okumak icin kullaniyor.
+# ultralytics zaten buna bagimli; burada acikca listeleniyor.
+pyyaml==6.0.3
+
 # Test bagimliligi
 pytest==9.0.3
