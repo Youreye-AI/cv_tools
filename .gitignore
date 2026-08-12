@@ -3,3 +3,7 @@ __pycache__/
 .pytest_cache/
 *.egg-info/
 datasets/
+notebooks/
+test/
+docs/
+alfu_black_apron_17_07/
