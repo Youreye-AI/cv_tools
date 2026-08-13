@@ -7,3 +7,9 @@ notebooks/
 test/
 docs/
 alfu_black_apron_17_07/
+models/
+# Ultralytics auto-downloads pretrained weights into the cwd; keep them out of the repo root.
+# Scoped to the root on purpose: data_collector/yolo26n.pt is a tracked, deliberate vendored file.
+/yolo*.pt
+*.mp4
+.claude/
